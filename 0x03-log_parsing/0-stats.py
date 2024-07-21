@@ -1,70 +1,63 @@
 #!/usr/bin/python3
-'''
-Reads line by line from the stdin and computes metrics
-'''
 import sys
-import re
+import signal
 
+# Dictionary to keep track of the count of each status code
+status_counts = {
+    "200": 0,
+    "301": 0,
+    "400": 0,
+    "401": 0,
+    "403": 0,
+    "404": 0,
+    "405": 0,
+    "500": 0
+}
 
-def initialize_log():
-    '''
-    Initializes log dictionary and status code list
-    '''
+total_size = 0
+line_count = 0
 
-    status_code = [200, 301, 400, 401, 403, 404, 405, 500]
-    log = {"file_size": 0, "code_list": {str(code): 0 for code in status_code}}
-    return log
+def print_stats():
+    """ Print the current statistics """
+    print("File size: {}".format(total_size))
+    for code in sorted(status_counts.keys()):
+        if status_counts[code] > 0:
+            print("{}: {}".format(code, status_counts[code]))
 
+def handle_interrupt(signal, frame):
+    """ Handle the keyboard interrupt (CTRL + C) """
+    print_stats()
+    sys.exit(0)
 
-def parse_line(line, regex, log):
-    '''
-    Uses regular expression to extract status code and file size
-    '''
+# Register the interrupt handler
+signal.signal(signal.SIGINT, handle_interrupt)
 
-    match = regex.fullmatch(line)
-    if match:
-        stat_code, file_size = match.group(1, 2)
-        log["file_size"] += int(file_size)
-
-        if stat_code.isdecimal():
-            log["code_list"][stat_code] += 1
-
-    return log
-
-
-def print_codes(log):
-    '''
-    Prints File size and status code count
-    '''
-
-    print("File size: {}".format(log['file_size']))
-    sorted_code_list = sorted(log["code_list"])
-
-    for code in sorted_code_list:
-        if log["code_list"][code]:
-            print(f"{code}: {log['code_list'][code]}")
-
-
-def main():
-    '''Creates the regular expression and reads from the stdin'''
-
-    regex = re.compile(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} - \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d+\] "GET '
-                       r'/projects/260 HTTP/1.1" (.{3}) (\d+)')
-    log = initialize_log()
-    line_count = 0
-
+try:
     for line in sys.stdin:
-        line = line.strip()
+        parts = line.split()
+        if len(parts) >= 7:
+            ip = parts[0]
+            # Skipping the part that checks the exact format for date and request path
+            # Assuming the log format is correct based on the problem statement
+            status_code = parts[-2]
+            file_size = parts[-1]
 
-        line_count = line_count + 1
-        parse_log = parse_line(line, regex, log)
+            # Check if status_code is a valid integer and within the expected range
+            if status_code in status_counts:
+                try:
+                    file_size = int(file_size)
+                    status_counts[status_code] += 1
+                    total_size += file_size
+                except ValueError:
+                    # If file_size is not an integer, skip this line
+                    continue
 
-        if line_count % 10 == 0:
-            print_codes(parse_log)
+            line_count += 1
 
+            if line_count % 10 == 0:
+                print_stats()
 
-if __name__ == "__main__":
-    '''Calling necessary functions'''
-
-    main()
-    initialize_log()
+except KeyboardInterrupt:
+    handle_interrupt(None, None)
+finally:
+    print_stats()
