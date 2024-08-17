@@ -4,7 +4,7 @@
 """
 
 
-def rotate_2d_matrix(matrix: list[list[int]]) -> None:
+def rotate_2d_matrix(matrix) -> None:
     """Performs in-place rotation of a 2D matrix"""
     n = len(matrix)
     for i in range(n):
