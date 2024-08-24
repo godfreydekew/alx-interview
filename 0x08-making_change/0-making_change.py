@@ -13,8 +13,6 @@ def makeChange(coins: List[int], total: int) -> int:
     for i in range(1, total + 1):
         for coin in coins:
             if coin <= i:
-                value = i - coin
-                coins_needed = track_coins[value] + 1
-                max_coins_needed = min(coins_needed, track_coins[i])
+                max_coins_needed = min(track_coins[i - coin] + 1, track_coins[i])
                 track_coins[i] = max_coins_needed
     return track_coins[total] if track_coins[total] <= total else -1
